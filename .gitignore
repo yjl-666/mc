@@ -1,6 +1,25 @@
 # Compiled class file
 *.class
 
+# Gradle
+.gradle/
+build/
+out/
+logs/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.settings/
+bin/
+*.launch
+
+# VS Code
+.vscode/
 # Log file
 *.log
 
