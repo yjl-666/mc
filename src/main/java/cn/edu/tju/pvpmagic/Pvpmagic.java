@@ -1,5 +1,6 @@
 package cn.edu.tju.pvpmagic;
 
+import cn.edu.tju.pvpmagic.items.ModItems;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -59,6 +60,7 @@ public class Pvpmagic {
         output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab. For your own tabs, this method is preferred over the event
     }).build());
 
+
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Pvpmagic(IEventBus modEventBus, ModContainer modContainer) {
@@ -76,6 +78,8 @@ public class Pvpmagic {
         // Note that this is necessary if and only if we want *this* class (Pvpmagic) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
+
+        ModItems.register(modEventBus);
 
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
@@ -97,7 +101,10 @@ public class Pvpmagic {
 
     // Add the example block item to the building blocks tab
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) event.accept(EXAMPLE_BLOCK_ITEM);
+        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
+            event.accept(EXAMPLE_BLOCK_ITEM);
+            event.accept(EXAMPLE_ITEM);
+        };
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
