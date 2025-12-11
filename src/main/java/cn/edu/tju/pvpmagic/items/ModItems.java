@@ -9,7 +9,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Pvpmagic.MODID);
     public static final DeferredItem<Item> LOGO = ITEMS.register("logo",
-            () -> new Item(new Item.Properties()));
+            () -> new Logo(new Item.Properties()));
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }
