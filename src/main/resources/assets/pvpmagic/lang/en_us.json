@@ -2,5 +2,7 @@
   "itemGroup.pvpmagic": "Example Mod Tab",
   "block.pvpmagic.example_block": "Example Block",
   "item.pvpmagic.example_item": "Example Item",
-  "item.pvpmagic.logo": "Logo"
+  "item.pvpmagic.logo": "Logo",
+  "item.pvpmagic.magic_dust": "Magic Dust",
+  "message.magic_dust.fail": "Magic failed~(⊙o⊙)？Good luck."
 }

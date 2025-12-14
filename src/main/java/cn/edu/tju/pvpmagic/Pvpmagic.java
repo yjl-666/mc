@@ -60,8 +60,13 @@ public class Pvpmagic {
 
     // Creates a creative tab with the id "pvpmagic:example_tab" for the example item, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab",
-            () -> CreativeModeTab.builder().title(Component.translatable("itemGroup.pvpmagic")).withTabsBefore(CreativeModeTabs.COMBAT).icon(() -> EXAMPLE_ITEM.get().getDefaultInstance()).displayItems((parameters, output) -> {
-        output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab. For your own tabs, this method is preferred over the event
+            () -> CreativeModeTab.builder().title(Component.translatable("itemGroup.pvpmagic"))
+                    .withTabsBefore(CreativeModeTabs.COMBAT).icon(() ->
+                            EXAMPLE_ITEM.get().getDefaultInstance()).displayItems((parameters, output) -> {
+        output.accept(EXAMPLE_ITEM.get());
+        output.accept(LOGO);
+        output.accept(MAGIC_DUST);
+        output.accept(EXAMPLE_BLOCK_ITEM.get());// Add the example item to the tab. For your own tabs, this method is preferred over the event
     }).build());
 
 
@@ -105,11 +110,11 @@ public class Pvpmagic {
 
     // Add the example block item to the building blocks tab
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == EXAMPLE_TAB.getKey()) {
-            event.accept(EXAMPLE_BLOCK_ITEM);
-            event.accept(EXAMPLE_ITEM);
-            event.accept(LOGO);
-            event.accept(MAGIC_DUST);
+        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+            event.accept(EXAMPLE_BLOCK_ITEM.get());
+            event.accept(EXAMPLE_ITEM.get());
+            event.accept(LOGO.get());
+            event.accept(MAGIC_DUST.get());
         };
     }
 

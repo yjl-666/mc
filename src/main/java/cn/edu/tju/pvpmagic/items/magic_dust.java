@@ -20,6 +20,7 @@ public class magic_dust extends Item {
         {
             ServerPlayer serverPlayer=(ServerPlayer)player;
             BlockPos blockPos=serverPlayer.blockPosition();
+
             int x=blockPos.getX();
             int z=blockPos.getZ();
             int y=255;
@@ -28,10 +29,15 @@ public class magic_dust extends Item {
                 if (!level.isEmptyBlock(pos)) {
                     break;
                 }
+                if (y<(-64)){
+                    serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.magic_dust.fail"));
+                    return InteractionResultHolder.consume(itemStack);
+                }
             }
             serverPlayer.teleportTo(x+0.5,y+1,z+0.5);
-            itemStack.shrink(1);
-            player.getCooldowns().addCooldown(this,1);
+            if (!serverPlayer.gameMode.isCreative()){
+                itemStack.shrink(1);}
+            player.getCooldowns().addCooldown(this,20);
             return InteractionResultHolder.success(itemStack);
         }else{
             return InteractionResultHolder.consume(itemStack);
