@@ -34,6 +34,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
 import static cn.edu.tju.pvpmagic.items.ModItems.LOGO;
+import static cn.edu.tju.pvpmagic.items.ModItems.MAGIC_DUST;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Pvpmagic.MODID)
@@ -104,10 +105,11 @@ public class Pvpmagic {
 
     // Add the example block item to the building blocks tab
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.BUILDING_BLOCKS) {
+        if (event.getTabKey() == EXAMPLE_TAB.getKey()) {
             event.accept(EXAMPLE_BLOCK_ITEM);
             event.accept(EXAMPLE_ITEM);
             event.accept(LOGO);
+            event.accept(MAGIC_DUST);
         };
     }
 
