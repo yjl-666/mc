@@ -11,7 +11,7 @@ public class ModItems {
     public static final DeferredItem<Item> LOGO = ITEMS.register("logo",
             () -> new Logo(new Item.Properties()));
     public static final DeferredItem<Item> MAGIC_DUST = ITEMS.register("magic_dust",
-            () -> new Item(
+            () -> new magic_dust(
                     new Item.Properties()
                             .stacksTo(64)
             )
