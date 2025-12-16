@@ -33,8 +33,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
-import static cn.edu.tju.pvpmagic.items.ModItems.LOGO;
-import static cn.edu.tju.pvpmagic.items.ModItems.MAGIC_DUST;
+import static cn.edu.tju.pvpmagic.items.ModItems.*;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Pvpmagic.MODID)
@@ -66,7 +65,8 @@ public class Pvpmagic {
         output.accept(EXAMPLE_ITEM.get());
         output.accept(LOGO);
         output.accept(MAGIC_DUST);
-        output.accept(EXAMPLE_BLOCK_ITEM.get());// Add the example item to the tab. For your own tabs, this method is preferred over the event
+        output.accept(EXAMPLE_BLOCK_ITEM.get());
+        output.accept(FINDER);// Add the example item to the tab. For your own tabs, this method is preferred over the event
     }).build());
 
 
