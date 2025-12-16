@@ -3,5 +3,6 @@
   "block.pvpmagic.example_block": "Example Block",
   "item.pvpmagic.example_item": "Example Item",
   "item.pvpmagic.logo": "Logo",
-  "item.pvpmagic.magic_dust": "Magic Dust"
+  "item.pvpmagic.magic_dust": "Magic Dust",
+  "item.pvpmagic.find_target": "Find Target"
 }

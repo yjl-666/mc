@@ -16,6 +16,12 @@ public class ModItems {
                             .stacksTo(64)
             )
     );
+    public static final DeferredItem<Item> FIND_TARGET = ITEMS.register("find_target",
+            () -> new find_target(
+                    new Item.Properties()
+                            .stacksTo(64)
+            )
+    );
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }
