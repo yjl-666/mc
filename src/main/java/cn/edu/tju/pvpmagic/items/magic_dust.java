@@ -8,20 +8,19 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
-import org.jetbrains.annotations.NotNull;
-
 public class magic_dust extends Item {
     public magic_dust(Properties properties) {
         super(properties);
     }
     @Override
-    public @NotNull InteractionResultHolder<ItemStack>use(Level level, Player player, @NotNull InteractionHand hand)
+    public InteractionResultHolder<ItemStack>use(Level level,Player player,InteractionHand hand)
     {
         ItemStack itemStack=player.getItemInHand(hand);
         if(!level.isClientSide())
         {
             ServerPlayer serverPlayer=(ServerPlayer)player;
             BlockPos blockPos=serverPlayer.blockPosition();
+
             int x=blockPos.getX();
             int z=blockPos.getZ();
             int y=255;
@@ -30,9 +29,14 @@ public class magic_dust extends Item {
                 if (!level.isEmptyBlock(pos)) {
                     break;
                 }
+                if (y<(-64)){
+                    serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.magic_dust.fail"));
+                    return InteractionResultHolder.consume(itemStack);
+                }
             }
             serverPlayer.teleportTo(x+0.5,y+1,z+0.5);
-            itemStack.shrink(1);
+            if (!serverPlayer.gameMode.isCreative()){
+                itemStack.shrink(1);}
             player.getCooldowns().addCooldown(this,20);
             return InteractionResultHolder.success(itemStack);
         }else{
