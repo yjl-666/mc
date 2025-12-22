@@ -7,7 +7,6 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.InteractionResultHolder;
@@ -21,6 +20,8 @@ import java.util.stream.Collectors;
 public class find_target extends Item {
     // 存储高光效果的映射表：观看者 -> (目标 -> 结束时间戳)
     private static final Map<UUID, Map<UUID, Long>> GLOWING_EFFECTS = new HashMap<>();
+    // 存储高光目标的映射表：目标 -> 观看者集合
+    private static final Map<UUID, Set<UUID>> TARGET_MARKED_BY = new HashMap<>();
 
     public find_target(Properties properties) {
         super(properties);
@@ -72,12 +73,19 @@ public class find_target extends Item {
     public static void addPrivateGlowing(ServerPlayer viewer, Player target, int durationTicks) {
         if (viewer == null || target == null) return;
 
+        // 在添加新效果前先清理过期效果
+        cleanupExpiredGlows(viewer);
+
         // 计算结束时间
         long endTime = viewer.level().getGameTime() + durationTicks;
 
-        // 存储到映射表
+        // 存储到观看者映射表
         GLOWING_EFFECTS.computeIfAbsent(viewer.getUUID(), k -> new HashMap<>())
                 .put(target.getUUID(), endTime);
+
+        // 存储到目标标记映射表
+        TARGET_MARKED_BY.computeIfAbsent(target.getUUID(), k -> new HashSet<>())
+                .add(viewer.getUUID());
 
         // 发送高光数据包给观看者
         sendGlowingPacket(viewer, target, true);
@@ -99,6 +107,15 @@ public class find_target extends Item {
             }
         }
 
+        // 清理目标标记映射表
+        Set<UUID> viewers = TARGET_MARKED_BY.get(target.getUUID());
+        if (viewers != null) {
+            viewers.remove(viewer.getUUID());
+            if (viewers.isEmpty()) {
+                TARGET_MARKED_BY.remove(target.getUUID());
+            }
+        }
+
         // 发送移除高光的数据包
         sendGlowingPacket(viewer, target, false);
     }
@@ -116,6 +133,14 @@ public class find_target extends Item {
             for (UUID targetId : targetMap.keySet()) {
                 Player target = viewer.server.getPlayerList().getPlayer(targetId);
                 if (target != null) {
+                    // 清理目标标记映射表
+                    Set<UUID> viewers = TARGET_MARKED_BY.get(targetId);
+                    if (viewers != null) {
+                        viewers.remove(viewer.getUUID());
+                        if (viewers.isEmpty()) {
+                            TARGET_MARKED_BY.remove(targetId);
+                        }
+                    }
                     sendGlowingPacket(viewer, target, false);
                 }
             }
@@ -141,7 +166,7 @@ public class find_target extends Item {
                     return true;
                 } else {
                     // 超时，移除
-                    targetMap.remove(target.getUUID());
+                    removePrivateGlowing(viewer, target);
                 }
             }
         }
@@ -149,62 +174,100 @@ public class find_target extends Item {
     }
 
     /**
+     * 检查目标是否被标记为高光状态
+     * @param target 目标玩家
+     * @return 是否处于被高光标记状态
+     */
+    public static boolean isTargetMarked(Player target) {
+        if (target == null) return false;
+        // 先检查是否有过期的高光
+        Set<UUID> viewerIds = TARGET_MARKED_BY.get(target.getUUID());
+        if (viewerIds != null) {
+            // 移除已过期的观看者
+            viewerIds.removeIf(viewerId -> {
+                ServerPlayer viewer = (ServerPlayer) target.level().getPlayerByUUID(viewerId);
+                if (viewer != null && !hasGlowingEffect(viewer, target)) {
+                    return true;
+                }
+                return false;
+            });
+            if (viewerIds.isEmpty()) {
+                TARGET_MARKED_BY.remove(target.getUUID());
+                return false;
+            }
+        }
+        return TARGET_MARKED_BY.containsKey(target.getUUID());
+    }
+
+    /**
      * 发送高光数据包
      */
     private static void sendGlowingPacket(ServerPlayer viewer, Entity target, boolean glowing) {
-        SynchedEntityData entityData = target.getEntityData();
-        EntityDataAccessor<Byte> DATA_SHARED_FLAGS_ID = SynchedEntityData.defineId(Entity.class, EntityDataSerializers.BYTE);
-
-        byte flags = entityData.get(DATA_SHARED_FLAGS_ID);
-        if (glowing) {
-            flags |= 0x40; // 设置发光标志位
-        } else {
-            flags &= ~0x40; // 清除发光标志位
-        }
-
-        // 创建并发送数据包
-        ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(
-                target.getId(),
-                entityData.packDirty()
-        );
-        viewer.connection.send(packet);
-    }
-    private static final Map<UUID, Map<UUID, Long>> GLOWING_TIMERS = new HashMap<>();
-
-    private static void scheduleGlowRemoval(ServerPlayer viewer, Player target, int durationTicks) {
-        // 直接存储过期时间，不执行延迟任务
-    }
-
-    // 在每个玩家更新时检查高光过期（添加这个方法）
-    public static void checkGlowExpiry(Player player) {
-        if (player.level().isClientSide()) return;
-
-        long currentTime = player.level().getGameTime();
-
-        // 检查该玩家作为观看者的高光是否过期
-        Map<UUID, Long> targetMap = GLOWING_EFFECTS.get(player.getUUID());
-        if (targetMap != null) {
-            Iterator<Map.Entry<UUID, Long>> iterator = targetMap.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<UUID, Long> entry = iterator.next();
-                if (currentTime >= entry.getValue()) {
-                    // 高光过期
-                    Player target = player.level().getPlayerByUUID(entry.getKey());
-                    if (target != null) {
-                        removePrivateGlowing((ServerPlayer) player, target);
-                    }
-                    iterator.remove();
-                }
+        try {
+            // 使用更安全的方法设置高光
+            if (glowing) {
+                target.setGlowingTag(true);
+            } else {
+                target.setGlowingTag(false);
             }
+
+            // 获取实体数据，确保不为null
+            List<SynchedEntityData.DataValue<?>> dataValues = target.getEntityData().getNonDefaultValues();
+            if (dataValues == null) {
+                dataValues = List.of(); // 使用空列表作为安全值
+            }
+
+            ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(
+                    target.getId(),
+                    dataValues
+            );
+            viewer.connection.send(packet);
+        } catch (Exception e) {
+            // 捕获异常防止崩溃
+            System.err.println("发送高光数据包失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 清理过期的高光效果
+     */
+    private static void cleanupExpiredGlows(ServerPlayer viewer) {
+        long currentTime = viewer.level().getGameTime();
+        Map<UUID, Long> targetMap = GLOWING_EFFECTS.get(viewer.getUUID());
+
+        if (targetMap != null) {
+            targetMap.entrySet().removeIf(entry -> {
+                if (currentTime >= entry.getValue()) {
+                    // 过期，移除高光
+                    Player target = viewer.level().getPlayerByUUID(entry.getKey());
+                    if (target != null) {
+                        // 清理目标标记映射表
+                        Set<UUID> viewers = TARGET_MARKED_BY.get(entry.getKey());
+                        if (viewers != null) {
+                            viewers.remove(viewer.getUUID());
+                            if (viewers.isEmpty()) {
+                                TARGET_MARKED_BY.remove(entry.getKey());
+                            }
+                        }
+                        // 发送移除数据包
+                        try {
+                            target.setGlowingTag(false);
+                            viewer.connection.send(new ClientboundSetEntityDataPacket(
+                                    target.getId(),
+                                    target.getEntityData().getNonDefaultValues()
+                            ));
+                        } catch (Exception e) {
+                            System.err.println("清理高光失败: " + e.getMessage());
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            });
+
             if (targetMap.isEmpty()) {
-                GLOWING_EFFECTS.remove(player.getUUID());
+                GLOWING_EFFECTS.remove(viewer.getUUID());
             }
         }
     }
 }
-// 在其他地方（如玩家tick事件）调用checkGlowExpiry
-//添加高光效果：addPrivateGlowing(serverPlayer, target, duration)
-//提前移除单个目标的高光：removePrivateGlowing(serverPlayer, target)
-//清除玩家的所有高光效果：clearAllGlowing(serverPlayer)
-//检查高光状态：hasGlowingEffect(serverPlayer, target)
-
