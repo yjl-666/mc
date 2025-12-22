@@ -203,6 +203,45 @@ public class find_target extends Item {
      * 发送高光数据包
      */
     private static void sendGlowingPacket(ServerPlayer viewer, Entity target, boolean glowing) {
+        // 在主线程执行
+        viewer.server.execute(() -> {
+            try {
+                // 方法1：使用Networking API（推荐）
+                sendGlowingViaNetworking(viewer, target, glowing);
+
+            } catch (Exception e) {
+                System.err.println("[find_target] 发送高光失败: " + e.getClass().getSimpleName() +
+                        ": " + e.getMessage());
+            }
+        });
+    }
+
+    private static void sendGlowingViaNetworking(ServerPlayer viewer, Entity target, boolean glowing) {
+        try {
+            // 直接修改实体的发光状态（客户端只对这个玩家可见）
+            // 这个方法会设置实体的内部状态
+            target.setGlowingTag(glowing);
+
+            // 然后发送实体更新数据包给特定玩家
+            // 获取实体所有非默认的同步数据
+            List<SynchedEntityData.DataValue<?>> dataValues = target.getEntityData().getNonDefaultValues();
+
+            if (dataValues != null && !dataValues.isEmpty()) {
+                ClientboundSetEntityDataPacket packet = new ClientboundSetEntityDataPacket(
+                        target.getId(),
+                        dataValues
+                );
+                viewer.connection.send(packet);
+            }
+
+            // 立即恢复实体的发光状态（防止其他玩家看到）
+            target.setGlowingTag(false);
+
+        } catch (Exception e) {
+            System.err.println("[find_target] 发送高光失败: " + e.getMessage());
+        }
+    }
+    /*private static void sendGlowingPacket(ServerPlayer viewer, Entity target, boolean glowing) {
         try {
             // 使用更安全的方法设置高光
             if (glowing) {
@@ -226,7 +265,7 @@ public class find_target extends Item {
             // 捕获异常防止崩溃
             System.err.println("发送高光数据包失败: " + e.getMessage());
         }
-    }
+    }*/
 
     /**
      * 清理过期的高光效果
